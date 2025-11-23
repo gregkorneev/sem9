@@ -5,7 +5,7 @@
 void solveSingleN(int n);
 
 // Серия экспериментов для N = 1..maxN
-// Анализирует количество шагов и время работы
+// Анализирует количество шагов и время работы, пишет CSV
 void runExperiments(int maxN);
 
 #endif // HANOI_H

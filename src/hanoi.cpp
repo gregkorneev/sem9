@@ -2,13 +2,16 @@
 
 #include <iostream>
 #include <chrono>
+#include <fstream>      // для записи в файл CSV
+#include <filesystem>   // для создания папки csv
+#include <iomanip>      // для форматирования вывода
 
-// Тип для счётчика ходов
 using long_long = long long;
+namespace fs = std::filesystem;
 
 // -------------------------------------------------------
 // Вспомогательная функция: 2^n (степень двойки)
-// Используем простой цикл, без сложных конструкций.
+// Простая реализация через цикл.
 // -------------------------------------------------------
 long_long pow2(int n) {
     long_long result = 1;
@@ -25,7 +28,7 @@ long_long pow2(int n) {
 // from   — с какого стержня (1, 2 или 3)
 // to     — на какой стержень
 // aux    — вспомогательный стержень
-// moves  — счётчик ходов (количество сделанных перемещений)
+// moves  — счётчик ходов
 // print  — если true, печатаем каждый ход
 // -------------------------------------------------------
 void hanoiRecursive(int n, int from, int to, int aux,
@@ -38,7 +41,7 @@ void hanoiRecursive(int n, int from, int to, int aux,
     // 1. Переносим n-1 дисков на вспомогательный стержень
     hanoiRecursive(n - 1, from, aux, to, moves, print);
 
-    // 2. Переносим самый большой диск (номер n)
+    // 2. Переносим самый большой диск
     ++moves;
     if (print) {
         std::cout << "Ход " << moves << ": диск " << n
@@ -46,14 +49,14 @@ void hanoiRecursive(int n, int from, int to, int aux,
                   << " на стержень " << to << "\n";
     }
 
-    // 3. Переносим n-1 дисков с вспомогательного на целевой
+    // 3. Переносим n-1 дисков со вспомогательного на целевой
     hanoiRecursive(n - 1, aux, to, from, moves, print);
 }
 
 // -------------------------------------------------------
-// Решение для одного N.
+// Решение задачи для одного N.
 // Для малых N (<= 5) выводим все ходы,
-// для больших N только считаем количество шагов.
+// для больших N только считаем количество шагов и время.
 // -------------------------------------------------------
 void solveSingleN(int n) {
     if (n <= 0) {
@@ -61,7 +64,7 @@ void solveSingleN(int n) {
         return;
     }
 
-    bool printMoves = (n <= 5); // ограничиваем вывод
+    bool printMoves = (n <= 5); // ограничиваем вывод ходов
 
     std::cout << "\n=== Решение Ханойских башен для N = " << n << " ===\n";
     if (printMoves) {
@@ -76,10 +79,12 @@ void solveSingleN(int n) {
     hanoiRecursive(n, 1, 3, 2, moves, printMoves);
     auto end = std::chrono::steady_clock::now();
 
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    // Время в миллисекундах как double
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
 
     long_long theoreticalMoves = pow2(n) - 1;
 
+    std::cout << std::fixed << std::setprecision(6);
     std::cout << "\nИтого ходов (по программе): " << moves << "\n";
     std::cout << "Теоретически 2^N - 1 = " << theoreticalMoves << "\n";
     std::cout << "Разница: " << (moves - theoreticalMoves) << "\n";
@@ -93,7 +98,8 @@ void solveSingleN(int n) {
 
 // -------------------------------------------------------
 // Серия экспериментов для N = 1..maxN.
-// Показываем, как растёт число шагов и время работы.
+// Результаты выводятся на экран и записываются в
+// файл csv/hanoi_results.csv (разделитель — запятая).
 // -------------------------------------------------------
 void runExperiments(int maxN) {
     if (maxN <= 0) {
@@ -101,9 +107,30 @@ void runExperiments(int maxN) {
         return;
     }
 
+    // 1. Создаём папку csv (если её ещё нет)
+    try {
+        fs::create_directories("csv");
+    } catch (...) {
+        std::cout << "Не удалось создать папку csv.\n";
+        return;
+    }
+
+    // 2. Открываем CSV-файл
+    std::ofstream csv("csv/hanoi_results.csv");
+    if (!csv.is_open()) {
+        std::cout << "Не удалось открыть файл csv/hanoi_results.csv для записи.\n";
+        return;
+    }
+
+    // Заголовок CSV: разделитель — запятая
+    csv << "N,moves_program,moves_theory,time_ms\n";
+
     std::cout << "\n=== Эксперименты: рост сложности для разных N ===\n";
+    std::cout << "Результаты также сохранены в файле csv/hanoi_results.csv\n\n";
     std::cout << "N\tХодов (программа)\tТеория (2^N-1)\tВремя, мс\n";
     std::cout << "--------------------------------------------------------------\n";
+
+    std::cout << std::fixed << std::setprecision(6);
 
     for (int n = 1; n <= maxN; ++n) {
         long_long moves = 0;
@@ -113,14 +140,23 @@ void runExperiments(int maxN) {
         hanoiRecursive(n, 1, 3, 2, moves, false);
         auto end = std::chrono::steady_clock::now();
 
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        double ms = std::chrono::duration<double, std::milli>(end - start).count();
         long_long theoreticalMoves = pow2(n) - 1;
 
+        // Вывод на экран
         std::cout << n << "\t"
                   << moves << "\t\t\t"
                   << theoreticalMoves << "\t\t"
                   << ms << "\n";
+
+        // Запись строки в CSV
+        csv << n << ','
+            << moves << ','
+            << theoreticalMoves << ','
+            << std::setprecision(10) << ms << '\n';
     }
+
+    csv.close();
 
     std::cout << "\nВывод по экспериментам:\n";
     std::cout << "• Число ходов растёт примерно как 2^N.\n";
@@ -131,7 +167,7 @@ void runExperiments(int maxN) {
     std::cout << "1) В программе реализован классический рекурсивный алгоритм.\n";
     std::cout << "   Он строит оптимальное решение и перебирает все ходы.\n";
     std::cout << "2) Любой корректный алгоритм должен сделать минимум 2^N - 1 ходов,\n";
-    std::cout << "   поэтому асимптотически более быстрый алгоритм по времени (меньше, чем O(2^N)) невозможен.\n";
-    std::cout << "3) \"Лучший\" алгоритм для Ханойских башен отличается только константой, \n";
+    std::cout << "   поэтому асимптотически более быстрый алгоритм (лучше, чем O(2^N)) невозможен.\n";
+    std::cout << "3) \"Лучший\" алгоритм для Ханойских башен отличается только константой,\n";
     std::cout << "   то есть насколько быстро он считает и выводит ходы, но порядок 2^N остаётся.\n";
 }
