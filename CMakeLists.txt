@@ -6,4 +6,5 @@ include_directories(include)
 add_executable(hanoi
     src/main.cpp
     src/hanoi.cpp
+    src/experiments.cpp
 )
