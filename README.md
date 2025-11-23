@@ -43,7 +43,8 @@ sem9/
 Чтобы полностью пересобрать проект и получить свежие результаты, выполните:
 
 ```bash
-rm -rf build && rm -rf data && cmake -B build && cmake --build build && ./build/hanoi
+rm -rf build && rm -rf data && cmake -B build && cmake --build build && ./build/hanoi && python3 .py/plot_hanoi.py && python3 .py/plot_hanoi_dashboard.py && python3 .py/plot_hanoi_table.py && python3 .py/plot_hanoi_performance_diff.py
+
 ```
 
 Эта команда:
