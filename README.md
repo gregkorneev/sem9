@@ -1,2 +1,2 @@
-bash
-```rm -rf build && cmake -B build && cmake --build build && ./build/hanoi
+```bash
+rm -rf build && cmake -B build && cmake --build build && ./build/hanoi
