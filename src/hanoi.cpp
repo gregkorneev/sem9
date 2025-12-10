@@ -6,89 +6,79 @@
 
 using long_long = long long;
 
-// -------------------------------------------------------
-// Вспомогательная функция: 2^n (степень двойки)
-// Простая реализация через цикл.
-// -------------------------------------------------------
-long_long pow2(int n) {
-    long_long result = 1;
-    for (int i = 0; i < n; ++i) {
-        result *= 2;
+// Внутренняя рекурсивная функция.
+// from, to, aux — стержни (A, B, C).
+// print         — печатать ли ход.
+static void hanoiRecursiveInternal(int n,
+                                   char from,
+                                   char to,
+                                   char aux,
+                                   long_long &moves,
+                                   bool print)
+{
+    if (n <= 0) return;
+    // Переносим n-1 дисков на вспомогательный стержень
+    hanoiRecursiveInternal(n - 1, from, aux, to, moves, print);
+
+    // Переносим самый большой диск
+    ++moves;
+    if (print) {
+        std::cout << "Переместить диск " << n
+                  << " с " << from
+                  << " на " << to << "\n";
     }
-    return result;
+
+    // Переносим n-1 дисков со вспомогательного на конечный
+    hanoiRecursiveInternal(n - 1, aux, to, from, moves, print);
 }
 
-// -------------------------------------------------------
-// Рекурсивный алгоритм Ханойских башен.
-//
-// n      — сколько дисков переносим
-// from   — с какого стержня (1, 2 или 3)
-// to     — на какой стержень
-// aux    — вспомогательный стержень
-// moves  — счётчик ходов
-// print  — если true, печатаем каждый ход
-// -------------------------------------------------------
-void hanoiRecursive(int n, int from, int to, int aux,
-                    long_long &moves, bool print) {
-    if (n == 0) {
-        // Базовый случай: нет дисков — нет ходов
+// Обёртка для экспериментов: только считает и измеряет время, без вывода.
+void solveHanoi(int n, long_long &moves, double &ms)
+{
+    moves = 0;
+    ms = 0.0;
+
+    if (n <= 0) {
         return;
     }
 
-    // 1. Переносим n-1 дисков на вспомогательный стержень
-    hanoiRecursive(n - 1, from, aux, to, moves, print);
+    auto start = std::chrono::steady_clock::now();
+    hanoiRecursiveInternal(n, 'A', 'C', 'B', moves, false);
+    auto end   = std::chrono::steady_clock::now();
 
-    // 2. Переносим самый большой диск
-    ++moves;
-    if (print) {
-        std::cout << "Ход " << moves << ": диск " << n
-                  << " со стержня " << from
-                  << " на стержень " << to << "\n";
-    }
-
-    // 3. Переносим n-1 дисков со вспомогательного на целевой
-    hanoiRecursive(n - 1, aux, to, from, moves, print);
+    ms = std::chrono::duration<double, std::milli>(end - start).count();
 }
 
-// -------------------------------------------------------
-// Решение задачи для одного N.
-// Для малых N (<= 5) выводим все ходы,
-// для больших N только считаем количество шагов и время.
-// -------------------------------------------------------
-void solveSingleN(int n) {
+// Интерактивный режим: решаем задачу для одного N.
+void solveSingleN(int n)
+{
     if (n <= 0) {
         std::cout << "N должно быть положительным.\n";
         return;
     }
 
-    bool printMoves = (n <= 5); // ограничиваем вывод ходов
-
-    std::cout << "\n=== Решение Ханойских башен для N = " << n << " ===\n";
-    if (printMoves) {
-        std::cout << "Выводим все ходы (полный перебор шагов):\n\n";
-    } else {
-        std::cout << "N слишком велико, ходы не печатаем (только считаем).\n\n";
-    }
+    bool printMoves = (n <= 8); // чтобы не заспамить терминал при больших N
 
     long_long moves = 0;
+    double ms = 0.0;
+
+    std::cout << "\n=== Задача Ханойских башен для N = " << n << " ===\n\n";
 
     auto start = std::chrono::steady_clock::now();
-    hanoiRecursive(n, 1, 3, 2, moves, printMoves);
-    auto end = std::chrono::steady_clock::now();
+    hanoiRecursiveInternal(n, 'A', 'C', 'B', moves, printMoves);
+    auto end   = std::chrono::steady_clock::now();
 
-    // Время в миллисекундах как double
-    double ms = std::chrono::duration<double, std::milli>(end - start).count();
+    ms = std::chrono::duration<double, std::milli>(end - start).count();
 
-    long_long theoreticalMoves = pow2(n) - 1;
+    long_long theory = (1LL << n) - 1;
 
     std::cout << std::fixed << std::setprecision(6);
-    std::cout << "\nИтого ходов (по программе): " << moves << "\n";
-    std::cout << "Теоретически 2^N - 1 = " << theoreticalMoves << "\n";
-    std::cout << "Разница: " << (moves - theoreticalMoves) << "\n";
-    std::cout << "Время работы: " << ms << " мс\n";
+    std::cout << "\nИтоги:\n";
+    std::cout << "  Количество ходов (перебор): " << moves   << "\n";
+    std::cout << "  Теоретическое значение    : " << theory  << "\n";
+    std::cout << "  Время выполнения          : " << ms      << " мс\n\n";
 
-    std::cout << "\nКомментарий по сложности:\n";
-    std::cout << "• Алгоритм делает примерно 2^N - 1 ходов.\n";
-    std::cout << "• Поэтому временная сложность: O(2^N).\n";
-    std::cout << "• Это полный перебор всех необходимых ходов для решения задачи.\n";
+    std::cout << "Комментарий:\n";
+    std::cout << "• Алгоритм выполняет полный перебор оптимального решения (2^N - 1 ходов).\n";
+    std::cout << "• При увеличении N объём работы растёт экспоненциально.\n\n";
 }
